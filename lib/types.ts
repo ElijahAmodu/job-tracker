@@ -1,4 +1,4 @@
-export type ExperienceType = 'job' | 'project' | 'education' | 'certification';
+export type ExperienceType = "job" | "project" | "education" | "certification";
 
 export interface ExperienceItem {
   id: string;
@@ -23,25 +23,37 @@ export interface Profile {
 }
 
 export type ApplicationStatus =
-  | 'draft'
-  | 'applied'
-  | 'interview'
-  | 'rejected'
-  | 'offer'
-  | 'withdrawn';
+  | "draft"
+  | "applied"
+  | "interview"
+  | "rejected"
+  | "offer"
+  | "withdrawn";
 
-// Structured tailored resume returned by the LLM — kept as JSON, not raw text,
-// so the PDF renderer and the editor UI can both work off the same shape.
+// Structured tailored resume returned by the LLM — a FIXED shape (not
+// free-form sections) so every generated resume always has Experience,
+// Projects, Skills, and Education, matching the source resume's format.
+
 export interface ResumeDraft {
+  role_title: string;
   summary: string;
-  sections: {
-    heading: string; // e.g. "Experience", "Projects", "Education"
-    items: {
-      title: string;
-      organization: string | null;
-      dates: string | null;
-      bullets: string[]; // tailored, LLM-rewritten bullets
-    }[];
+  experience: {
+    title: string;
+    organization: string | null;
+    dates: string | null;
+    bullets: string[]; // always 3+
+    tech_stack: string[];
+  }[];
+  projects: {
+    title: string;
+    description: string;
+    tech_stack: string[];
+  }[];
+  skills: string[];
+  education: {
+    title: string;
+    organization: string | null;
+    dates: string | null;
   }[];
 }
 

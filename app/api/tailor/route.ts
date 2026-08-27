@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { matchExperience } from "@/lib/matching";
-import { tailorApplication } from "@/lib/gemini";
+import { tailorApplication } from "@/lib/llm";
 import { ExperienceItem, Profile } from "@/lib/types";
 
 export async function POST(req: NextRequest) {
@@ -33,7 +33,7 @@ export async function POST(req: NextRequest) {
     .from("profile")
     .select("*")
     .eq("user_id", user.id)
-    .single<Profile>();
+    .maybeSingle<Profile>();
 
   const { data: experienceItems } = await supabase
     .from("experience_items")
@@ -41,22 +41,38 @@ export async function POST(req: NextRequest) {
     .eq("user_id", user.id)
     .returns<ExperienceItem[]>();
 
-  if (!profile || !experienceItems || experienceItems.length === 0) {
+  if (!profile) {
     return NextResponse.json(
-      { error: "Profile or experience items missing — set those up first" },
+      { error: "No profile found — fill in your profile at /profile first" },
+      { status: 400 },
+    );
+  }
+  if (!experienceItems || experienceItems.length === 0) {
+    return NextResponse.json(
+      {
+        error:
+          "No experience items found — add at least one at /experience first",
+      },
       { status: 400 },
     );
   }
 
-  // Step 1: cheap deterministic filter — only send relevant items to the LLM
+  // Step 1: cheap deterministic filter — grouped by type so jobs, projects,
+  // and education don't crowd each other out (see lib/matching.ts)
   const matched = matchExperience(experienceItems, jobDescription);
+  const matchedIds = [
+    ...matched.jobs,
+    ...matched.projects,
+    ...matched.education,
+    ...matched.certifications,
+  ].map((m) => m.id);
 
   // Step 2: LLM tailoring pass
   let result;
   try {
     result = await tailorApplication({
       profile,
-      matchedExperience: matched,
+      matched,
       jobDescription,
       company,
       roleTitle,
@@ -75,7 +91,7 @@ export async function POST(req: NextRequest) {
     .update({
       tailored_resume: result.resume,
       tailored_cover_letter: result.cover_letter,
-      matched_experience_ids: matched.map((m) => m.id),
+      matched_experience_ids: matchedIds,
       updated_at: new Date().toISOString(),
     })
     .eq("id", applicationId)
@@ -88,6 +104,6 @@ export async function POST(req: NextRequest) {
   return NextResponse.json({
     resume: result.resume,
     cover_letter: result.cover_letter,
-    matched_experience_ids: matched.map((m) => m.id),
+    matched_experience_ids: matchedIds,
   });
 }

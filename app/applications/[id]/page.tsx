@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import dynamic from "next/dynamic";
 import { createClient } from "@/lib/supabase";
-import { Application, Profile } from "@/lib//types";
+import { Application, Profile } from "@/lib/types";
 import { ResumeDocument } from "@/components/pdf/ResumeDocument";
 import { CoverLetterDocument } from "@/components/pdf/CoverLetterDocument";
 
@@ -101,7 +101,8 @@ export default function ApplicationDetailPage() {
         </span>
       </div>
 
-      {!application.tailored_resume && (
+      {(!application.tailored_resume ||
+        !application.tailored_resume.experience) && (
         <button
           onClick={runTailoring}
           disabled={tailoring}
@@ -114,46 +115,104 @@ export default function ApplicationDetailPage() {
       )}
       {error && <p className="text-red-600 text-sm">{error}</p>}
 
-      {application.tailored_resume && (
-        <section className="border rounded-lg p-4">
-          <h2 className="font-semibold mb-2">Tailored resume</h2>
-          <p className="text-sm text-gray-700 mb-2">
-            {application.tailored_resume.summary}
+      {application.tailored_resume &&
+        !application.tailored_resume.experience && (
+          <p className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded p-3">
+            This draft was generated before the resume format changed and can't
+            be displayed. Click "Generate tailored resume + cover letter" again
+            to regenerate it in the current format.
           </p>
-          {application.tailored_resume.sections.map((s, i) => (
-            <div key={i} className="mb-3">
-              <h3 className="text-sm font-semibold">{s.heading}</h3>
-              {s.items.map((it, j) => (
-                <div key={j} className="ml-2 mb-2">
-                  <p className="text-sm font-medium">
-                    {it.title} {it.organization ? `— ${it.organization}` : ""}
-                  </p>
-                  <ul className="list-disc ml-5 text-sm text-gray-700">
-                    {it.bullets.map((b, k) => (
-                      <li key={k}>{b}</li>
-                    ))}
-                  </ul>
-                </div>
-              ))}
-            </div>
-          ))}
+        )}
 
-          {profile && (
-            <PDFDownloadLink
-              document={
-                <ResumeDocument
-                  profile={profile}
-                  resume={application.tailored_resume}
-                />
-              }
-              fileName={`resume-${application.company}.pdf`}
-              className="inline-block mt-2 text-sm underline"
-            >
-              Download resume PDF
-            </PDFDownloadLink>
-          )}
-        </section>
-      )}
+      {application.tailored_resume &&
+        application.tailored_resume.experience && (
+          <section className="border rounded-lg p-4">
+            <h2 className="font-semibold mb-2">Tailored resume</h2>
+            <p className="text-xs text-gray-500 mb-1">
+              {application.tailored_resume.role_title}
+            </p>
+            <p className="text-sm text-gray-700 mb-3">
+              {application.tailored_resume.summary}
+            </p>
+
+            {application.tailored_resume.experience.length > 0 && (
+              <div className="mb-3">
+                <h3 className="text-sm font-semibold">Work Experience</h3>
+                {application.tailored_resume.experience.map((it, j) => (
+                  <div key={j} className="ml-2 mb-2">
+                    <p className="text-sm font-medium">
+                      {it.title} {it.organization ? `— ${it.organization}` : ""}{" "}
+                      <span className="text-xs text-gray-500">{it.dates}</span>
+                    </p>
+                    <ul className="list-disc ml-5 text-sm text-gray-700">
+                      {it.bullets.map((b, k) => (
+                        <li key={k}>{b}</li>
+                      ))}
+                    </ul>
+                    {it.tech_stack?.length > 0 && (
+                      <p className="text-xs text-gray-500 ml-1">
+                        Tech: {it.tech_stack.join(", ")}
+                      </p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {application.tailored_resume.projects?.length > 0 && (
+              <div className="mb-3">
+                <h3 className="text-sm font-semibold">Projects</h3>
+                {application.tailored_resume.projects.map((p, j) => (
+                  <div key={j} className="ml-2 mb-2">
+                    <p className="text-sm font-medium">{p.title}</p>
+                    <p className="text-sm text-gray-700">{p.description}</p>
+                    {p.tech_stack?.length > 0 && (
+                      <p className="text-xs text-gray-500">
+                        {p.tech_stack.join(", ")}
+                      </p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {application.tailored_resume.skills?.length > 0 && (
+              <div className="mb-3">
+                <h3 className="text-sm font-semibold">Technology Experience</h3>
+                <p className="text-sm text-gray-700">
+                  {application.tailored_resume.skills.join(", ")}
+                </p>
+              </div>
+            )}
+
+            {application.tailored_resume.education?.length > 0 && (
+              <div className="mb-3">
+                <h3 className="text-sm font-semibold">Education</h3>
+                {application.tailored_resume.education.map((edu, j) => (
+                  <p key={j} className="text-sm text-gray-700 ml-2">
+                    {edu.title}{" "}
+                    {edu.organization ? `— ${edu.organization}` : ""}
+                  </p>
+                ))}
+              </div>
+            )}
+
+            {profile && (
+              <PDFDownloadLink
+                document={
+                  <ResumeDocument
+                    profile={profile}
+                    resume={application.tailored_resume}
+                  />
+                }
+                fileName={`resume-${application.company}.pdf`}
+                className="inline-block mt-2 text-sm underline"
+              >
+                Download resume PDF
+              </PDFDownloadLink>
+            )}
+          </section>
+        )}
 
       {application.tailored_cover_letter !== null && (
         <section className="border rounded-lg p-4">
