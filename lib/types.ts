@@ -53,7 +53,6 @@ export interface ResumeDraft {
   education: {
     title: string;
     organization: string | null;
-    dates: string | null;
   }[];
 }
 
