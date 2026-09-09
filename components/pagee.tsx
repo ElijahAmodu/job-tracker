@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { createClient } from "../../lib/supabase";
-import { Application } from "../../lib/types";
+import { createClient } from "@/lib/supabase";
+import { Application } from "@/lib/types";
 
 export default function ApplicationsPage() {
   const supabase = createClient();
@@ -34,13 +34,15 @@ export default function ApplicationsPage() {
     } = await supabase.auth.getUser();
     // if (!user) return;
 
-        if (!user) {
+    if (!user) {
       setSaving(false);
       alert("You're not signed in — log in before saving an application.");
       return;
     }
 
-    const { error } = await supabase.from('applications').insert({...});
+    const { error } = await supabase
+      .from("applications")
+      .insert({ ...applications });
 
     setSaving(false);
 
