@@ -1,25 +1,42 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { createClient } from '@/lib/supabase';
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase";
 
 export default function LoginPage() {
   const supabase = createClient();
   const router = useRouter();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [mode, setMode] = useState<'signin' | 'signup'>('signin');
-  const [error, setError] = useState('');
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [mode, setMode] = useState<"signin" | "signup">("signin");
+  const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [resetSent, setResetSent] = useState(false);
+
+  async function handleForgotPassword() {
+    if (!email) {
+      setError('Enter your email above first, then click "Forgot password?"');
+      return;
+    }
+    setError("");
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/reset-password`,
+    });
+    if (error) {
+      setError(error.message);
+      return;
+    }
+    setResetSent(true);
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
-    setError('');
+    setError("");
 
     const { error } =
-      mode === 'signin'
+      mode === "signin"
         ? await supabase.auth.signInWithPassword({ email, password })
         : await supabase.auth.signUp({ email, password });
 
@@ -30,23 +47,23 @@ export default function LoginPage() {
       return;
     }
 
-    if (mode === 'signup') {
+    if (mode === "signup") {
       // Supabase sends a confirmation email by default. If you've turned
       // email confirmation off in the dashboard, the session is active
       // immediately and this redirect works right away.
-      setError('Check your email to confirm your account, then sign in.');
-      setMode('signin');
+      setError("Check your email to confirm your account, then sign in.");
+      setMode("signin");
       return;
     }
 
-    router.push('/applications');
+    router.push("/applications");
     router.refresh();
   }
 
   return (
     <main className="max-w-sm mx-auto p-6 mt-20">
       <h1 className="text-2xl font-bold mb-6">
-        {mode === 'signin' ? 'Sign in' : 'Create account'}
+        {mode === "signin" ? "Sign in" : "Create account"}
       </h1>
 
       <form onSubmit={handleSubmit} className="space-y-3">
@@ -73,16 +90,31 @@ export default function LoginPage() {
           disabled={loading}
           className="w-full bg-black text-white rounded px-4 py-2 disabled:opacity-50"
         >
-          {loading ? 'Please wait…' : mode === 'signin' ? 'Sign in' : 'Sign up'}
+          {loading ? "Please wait…" : mode === "signin" ? "Sign in" : "Sign up"}
         </button>
       </form>
 
       <button
-        onClick={() => setMode(mode === 'signin' ? 'signup' : 'signin')}
+        onClick={() => setMode(mode === "signin" ? "signup" : "signin")}
         className="text-sm underline mt-4"
       >
-        {mode === 'signin' ? "Don't have an account? Sign up" : 'Already have an account? Sign in'}
+        {mode === "signin"
+          ? "Don't have an account? Sign up"
+          : "Already have an account? Sign in"}
       </button>
+
+      <button
+        type="button"
+        onClick={handleForgotPassword}
+        className="text-sm underline text-gray-500"
+      >
+        Forgot password?
+      </button>
+      {resetSent && (
+        <p className="text-sm text-green-600">
+          Check your email for a reset link.
+        </p>
+      )}
     </main>
   );
 }
